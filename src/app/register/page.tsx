@@ -6,7 +6,7 @@ import Link from "next/link";
 import { EMAIL_DOMAIN, toEmail } from "@/lib/constants";
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ name: "", username: "", password: "", role: "student" });
+  const [form, setForm] = useState({ name: "", username: "", password: "", role: "student", teacherCode: "" });
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -22,6 +22,7 @@ export default function RegisterPage() {
         email: toEmail(form.username),
         password: form.password,
         role: form.role,
+        teacherCode: form.teacherCode,
       }),
     });
 
@@ -103,6 +104,18 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
+          {form.role === "teacher" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">교사 가입 코드</label>
+              <input
+                type="text"
+                value={form.teacherCode}
+                onChange={(e) => setForm({ ...form, teacherCode: e.target.value })}
+                placeholder="학교에서 안내받은 코드"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
           <button
             type="submit"
             className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"

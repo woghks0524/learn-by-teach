@@ -35,7 +35,7 @@ export default function AboutPage() {
 
         {/* 핵심 아이디어 */}
         <section className="mt-12 bg-white rounded-3xl shadow-sm p-6 sm:p-8">
-          <h2 className="text-xl font-bold mb-3">🎓 왜 "가르치면" 배울까요?</h2>
+          <h2 className="text-xl font-bold mb-3">🎓 왜 “가르치면” 배울까요?</h2>
           <p className="text-gray-600 leading-relaxed">
             누군가에게 설명하려면, 머릿속에서 흩어져 있던 걸 <b>내 말로 다시 정리</b>해야 해요.
             이 과정에서 아는 것과 모르는 것이 뚜렷하게 갈리고, 빈 곳을 스스로 채우게 돼요.

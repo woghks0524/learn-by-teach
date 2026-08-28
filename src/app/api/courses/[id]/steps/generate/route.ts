@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { buildStepGenPrompt } from "@/lib/ai-prompt";
-import { SETUP_MODEL } from "@/lib/constants";
+import { SETUP_MODEL, joinKnowledgeContent } from "@/lib/constants";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -32,9 +32,7 @@ export async function POST(
     return NextResponse.json({ error: "어떤 부분에 대한 단계인지 적어주세요" }, { status: 400 });
   }
 
-  const answerKey = course.knowledgeFiles
-    .map((f) => `[${f.knowledgeFile.fileName}]\n${f.knowledgeFile.content}`)
-    .join("\n\n");
+  const answerKey = joinKnowledgeContent(course.knowledgeFiles.map((f) => f.knowledgeFile));
 
   try {
     const resp = await openai.chat.completions.create({

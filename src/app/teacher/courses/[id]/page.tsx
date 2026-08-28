@@ -13,9 +13,15 @@ interface Instance {
   id: string;
   student: Student;
   comprehensionState: string;
-  messages: { role: string; content: string; createdAt: string }[];
+  messageCount: number;
   stuck?: boolean;
   currentStepTitle?: string | null;
+}
+
+interface ChatMessage {
+  role: string;
+  content: string;
+  createdAt: string;
 }
 
 interface LessonStep {
@@ -74,6 +80,7 @@ export default function CourseDetailPage() {
   const [searchResults, setSearchResults] = useState<Student[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
   const [selectedInstance, setSelectedInstance] = useState<Instance | null>(null);
+  const [selectedMessages, setSelectedMessages] = useState<ChatMessage[] | null>(null); // null = 로딩 중
   const [loading, setLoading] = useState(true);
 
   // 그룹으로 학생 추가
@@ -399,7 +406,7 @@ export default function CourseDetailPage() {
                           </span>
                         )}
                         <span className={`text-xs px-2 py-1 rounded-full ${inst ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {inst ? `대화 ${inst.messages.length}개` : "미참여"}
+                          {inst ? `대화 ${inst.messageCount}개` : "미참여"}
                         </span>
                       </div>
                     </div>
@@ -540,7 +547,7 @@ export default function CourseDetailPage() {
 
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  최소 대화 수 <span className="text-gray-400 font-normal">(이 수 초과해도 완료 안 되면 '막힌 학생' 표시)</span>
+                  최소 대화 수 <span className="text-gray-400 font-normal">(이 수 초과해도 완료 안 되면 ‘막힌 학생’ 표시)</span>
                 </label>
                 <input
                   type="number"
@@ -584,11 +591,18 @@ export default function CourseDetailPage() {
               course.instances.map((inst) => (
                 <button
                   key={inst.id}
-                  onClick={() => setSelectedInstance(inst)}
+                  onClick={() => {
+                    setSelectedInstance(inst);
+                    setSelectedMessages(null);
+                    fetch(`/api/courses/${id}/instances/${inst.id}`)
+                      .then((r) => r.json())
+                      .then((d) => setSelectedMessages(Array.isArray(d.messages) ? d.messages : []))
+                      .catch(() => setSelectedMessages([]));
+                  }}
                   className={`w-full text-left p-3 rounded-lg transition ${selectedInstance?.id === inst.id ? "bg-blue-50 border border-blue-200" : "bg-white hover:bg-gray-50"}`}
                 >
                   <p className="font-medium">{inst.student.name}</p>
-                  <p className="text-xs text-gray-500">대화 {inst.messages.length}개</p>
+                  <p className="text-xs text-gray-500">대화 {inst.messageCount}개</p>
                 </button>
               ))
             )}
@@ -624,7 +638,10 @@ export default function CourseDetailPage() {
                 <div className="bg-white rounded-xl p-4">
                   <h3 className="font-semibold mb-3">대화 기록</h3>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {selectedInstance.messages.map((msg, i) => (
+                    {selectedMessages === null && (
+                      <p className="text-sm text-gray-400 text-center py-4">대화를 불러오는 중…</p>
+                    )}
+                    {(selectedMessages ?? []).map((msg, i) => (
                       <div key={i} className={`flex ${msg.role === "student" ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-xs px-3 py-2 rounded-lg text-sm ${msg.role === "student" ? "bg-blue-100 text-blue-900" : "bg-gray-100 text-gray-800"}`}>
                           <p className="text-xs font-medium mb-1 opacity-60">

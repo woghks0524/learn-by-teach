@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { buildSystemPrompt, buildComprehensionUpdatePrompt, buildStepJudgePrompt } from "@/lib/ai-prompt";
-import { CHAT_MODEL, JUDGE_MODEL, parseJsonArray, parseJsonObject } from "@/lib/constants";
+import { CHAT_MODEL, JUDGE_MODEL, MAX_HISTORY_MESSAGES, joinKnowledgeContent, parseJsonArray, parseJsonObject } from "@/lib/constants";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -13,7 +13,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "학생만 사용할 수 있습니다" }, { status: 403 });
   }
 
-  const { instanceId, message } = await req.json();
+  const { instanceId, message: rawMessage } = await req.json();
+
+  if (typeof instanceId !== "string" || typeof rawMessage !== "string" || !rawMessage.trim()) {
+    return NextResponse.json({ error: "메시지를 입력해주세요" }, { status: 400 });
+  }
+  const message = rawMessage.trim();
+  if (message.length > 2000) {
+    return NextResponse.json({ error: "메시지가 너무 길어요. 2,000자 이내로 나눠서 보내주세요." }, { status: 400 });
+  }
 
   const instance = await prisma.aIInstance.findUnique({
     where: { id: instanceId, studentId: session.user.id },
@@ -50,9 +58,7 @@ export async function POST(req: NextRequest) {
   });
 
   const course = instance.course;
-  const knowledgeContent = course.knowledgeFiles
-    .map((f) => `[${f.knowledgeFile.fileName}]\n${f.knowledgeFile.content}`)
-    .join("\n\n");
+  const knowledgeContent = joinKnowledgeContent(course.knowledgeFiles.map((f) => f.knowledgeFile));
 
   const systemPrompt = buildSystemPrompt({
     subject: course.subject,
@@ -71,8 +77,9 @@ export async function POST(req: NextRequest) {
     completionCriteria: currentStep?.completionCriteria ?? undefined,
   });
 
+  // 최근 이력만 전송 — 오래된 맥락은 이해도 상태가 대신한다
   const conversationMessages = [
-    ...instance.messages.map((m) => ({
+    ...instance.messages.slice(-MAX_HISTORY_MESSAGES).map((m) => ({
       role: (m.role === "student" ? "user" : "assistant") as "user" | "assistant",
       content: m.content,
     })),
@@ -158,7 +165,7 @@ export async function POST(req: NextRequest) {
     after(async () => {
       try {
         const allMessages = [
-          ...instance.messages.map((m) => ({ role: m.role, content: m.content })),
+          ...instance.messages.slice(-MAX_HISTORY_MESSAGES).map((m) => ({ role: m.role, content: m.content })),
           { role: "student", content: message },
           { role: "ai", content: aiMessage },
         ];

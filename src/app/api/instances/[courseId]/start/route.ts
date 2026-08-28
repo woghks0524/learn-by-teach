@@ -4,9 +4,14 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { buildSystemPrompt } from "@/lib/ai-prompt";
-import { CHAT_MODEL, parseJsonArray, avatarForPersonality } from "@/lib/constants";
+import { CHAT_MODEL, joinKnowledgeContent, parseJsonArray, avatarForPersonality } from "@/lib/constants";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// 학생 응답용 단계 정보 — completionCriteria(통과 판정 기준)·minMessages는 학생에게 보내지 않는다
+function toStudentStep<T extends { id: string; order: number; title: string; description: string | null; aiName: string; aiAvatar: string }>(s: T) {
+  return { id: s.id, order: s.order, title: s.title, description: s.description, aiName: s.aiName, aiAvatar: s.aiAvatar };
+}
 
 export async function POST(
   _req: NextRequest,
@@ -71,8 +76,8 @@ export async function POST(
     return NextResponse.json({
       instanceId: instance.id,
       messages,
-      steps,
-      currentStep,
+      steps: steps.map(toStudentStep),
+      currentStep: currentStep ? toStudentStep(currentStep) : null,
       stepProgress,
       pendingNextStep,
       allStepsCompleted,
@@ -104,8 +109,8 @@ export async function POST(
         return NextResponse.json({
           instanceId: existing!.id,
           messages: existing!.messages,
-          steps,
-          currentStep,
+          steps: steps.map(toStudentStep),
+          currentStep: currentStep ? toStudentStep(currentStep) : null,
           stepProgress,
         });
       }
@@ -122,9 +127,7 @@ export async function POST(
   });
   if (!course) return NextResponse.json({ error: "수업을 찾을 수 없습니다" }, { status: 404 });
 
-  const knowledgeContent = course.knowledgeFiles
-    .map((f) => `[${f.knowledgeFile.fileName}]\n${f.knowledgeFile.content}`)
-    .join("\n\n");
+  const knowledgeContent = joinKnowledgeContent(course.knowledgeFiles.map((f) => f.knowledgeFile));
 
   // 첫 단계 또는 기본 설정
   const firstStep = course.steps[0] ?? null;
@@ -182,8 +185,8 @@ export async function POST(
   return NextResponse.json({
     instanceId: instance.id,
     messages: [{ role: "ai", content: greeting, createdAt: new Date() }],
-    steps: course.steps,
-    currentStep: firstStep,
+    steps: course.steps.map(toStudentStep),
+    currentStep: firstStep ? toStudentStep(firstStep) : null,
     stepProgress,
     friend: { name: course.aiName, avatar: avatarForPersonality(course.personality) },
   });

@@ -39,7 +39,9 @@ export async function GET(
       instances: {
         include: {
           student: { select: { id: true, name: true, email: true } },
-          messages: { orderBy: { createdAt: "asc" } },
+          // 메시지 본문은 목록에서 내려주지 않는다(학생 수×대화 수만큼 무거워짐).
+          // 개수만 내려주고, 전체 대화는 학생 클릭 시 /instances/[instanceId]로 따로 가져온다.
+          _count: { select: { messages: true } },
           stepProgress: {
             include: {
               step: true,
@@ -66,6 +68,7 @@ export async function GET(
         currentProgress._count.messages > currentProgress.step.minMessages;
       return {
         ...inst,
+        messageCount: inst._count.messages,
         stuck,
         currentStepTitle: currentProgress?.step.title ?? null,
       };

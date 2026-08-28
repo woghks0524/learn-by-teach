@@ -56,7 +56,7 @@ export default function GuidePage() {
             ))}
           </div>
           <div className="mt-4 bg-sky-100/60 rounded-2xl p-4 text-sm text-sky-800 leading-relaxed">
-            💡 <b>팁</b> — AI가 만든 단계가 단원 전체라 부담되면, 그냥 필요한 <b>차시(부분)만</b> "이 부분만 단계 만들기"로 뽑아 쓰세요. 하나씩 붙여 가며 운영할 수 있어요.
+            💡 <b>팁</b> — AI가 만든 단계가 단원 전체라 부담되면, 그냥 필요한 <b>차시(부분)만</b> “이 부분만 단계 만들기”로 뽑아 쓰세요. 하나씩 붙여 가며 운영할 수 있어요.
           </div>
         </section>
 

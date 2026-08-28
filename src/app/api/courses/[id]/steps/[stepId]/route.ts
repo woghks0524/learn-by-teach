@@ -50,16 +50,20 @@ export async function DELETE(
   const course = await prisma.course.findUnique({ where: { id: courseId, teacherId: session.user.id } });
   if (!course) return NextResponse.json({ error: "수업을 찾을 수 없습니다" }, { status: 404 });
 
-  await prisma.lessonStep.delete({ where: { id: stepId, courseId } });
-
-  // 삭제 후 order 재정렬
-  const remaining = await prisma.lessonStep.findMany({
-    where: { courseId },
-    orderBy: { order: "asc" },
+  // 삭제와 order 재정렬을 한 트랜잭션으로 — 중간 실패 시 순서가 꼬이지 않도록
+  await prisma.$transaction(async (tx) => {
+    await tx.lessonStep.delete({ where: { id: stepId, courseId } });
+    const remaining = await tx.lessonStep.findMany({
+      where: { courseId },
+      orderBy: { order: "asc" },
+      select: { id: true, order: true },
+    });
+    for (const [i, s] of remaining.entries()) {
+      if (s.order !== i + 1) {
+        await tx.lessonStep.update({ where: { id: s.id }, data: { order: i + 1 } });
+      }
+    }
   });
-  await Promise.all(
-    remaining.map((s, i) => prisma.lessonStep.update({ where: { id: s.id }, data: { order: i + 1 } }))
-  );
 
   return NextResponse.json({ ok: true });
 }

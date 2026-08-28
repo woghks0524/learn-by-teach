@@ -23,6 +23,21 @@ export const JUDGE_MODEL = "gpt-4o";
 // gpt-5 계열은 추론 모델이라 max_tokens 대신 max_completion_tokens를 쓴다.
 export const SETUP_MODEL = "gpt-5.5";
 
+// ── AI 프롬프트 크기 상한 (비용 가드) ──
+// 지식파일은 매 채팅 턴마다 시스템 프롬프트에 통째로 들어간다. 상한이 없으면 교과서 전체를
+// 업로드했을 때 메시지 하나당 수만 토큰이 나가므로, 여기서 한 번에 자른다(courses/generate의 12,000자와 동일 기준).
+export const MAX_KNOWLEDGE_CHARS = 12000;
+// 대화 이력도 매 턴 전체 전송하면 수업 후반에 토큰이 수십 배로 커진다.
+// 이해도 상태(comprehensionState)가 요약 역할을 하므로 최근 메시지만 보내도 맥락이 유지된다.
+export const MAX_HISTORY_MESSAGES = 30;
+
+export function joinKnowledgeContent(files: { fileName: string; content: string }[]): string {
+  return files
+    .map((f) => `[${f.fileName}]\n${f.content}`)
+    .join("\n\n")
+    .slice(0, MAX_KNOWLEDGE_CHARS);
+}
+
 // DB에 문자열로 저장된 JSON 필드 파싱 — 깨진 데이터가 있어도 500 대신 기본값으로 진행
 export function parseJsonArray(raw: string): string[] {
   try {

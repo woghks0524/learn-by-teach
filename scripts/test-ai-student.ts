@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- 개발용 시뮬레이션 스크립트(배포 코드 아님) */
 import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 

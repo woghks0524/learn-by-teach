@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { buildSystemPrompt } from "@/lib/ai-prompt";
-import { CHAT_MODEL, parseJsonArray, parseJsonObject } from "@/lib/constants";
+import { CHAT_MODEL, joinKnowledgeContent, parseJsonArray, parseJsonObject } from "@/lib/constants";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -60,9 +60,7 @@ export async function POST(
     data: { currentStepId: nextStep.id },
   });
 
-  const knowledgeContent = course.knowledgeFiles
-    .map((f) => `[${f.knowledgeFile.fileName}]\n${f.knowledgeFile.content}`)
-    .join("\n\n");
+  const knowledgeContent = joinKnowledgeContent(course.knowledgeFiles.map((f) => f.knowledgeFile));
 
   const systemPrompt = buildSystemPrompt({
     subject: course.subject,
@@ -105,7 +103,15 @@ export async function POST(
   });
 
   return NextResponse.json({
-    newStep: nextStep,
+    // 학생 응답이므로 completionCriteria(통과 판정 기준)·minMessages는 제외
+    newStep: {
+      id: nextStep.id,
+      order: nextStep.order,
+      title: nextStep.title,
+      description: nextStep.description,
+      aiName: nextStep.aiName,
+      aiAvatar: nextStep.aiAvatar,
+    },
     message: greeting,
     stepId: nextStep.id,
   });
